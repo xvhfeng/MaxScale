@@ -1173,10 +1173,17 @@ bool ParamEnumList<T>::from_string(const std::string& values_as_string,
                                    std::string* pMessage) const
 {
     bool success = true;
-
+    bool value_NONE_seen = false;
+    std::string invalid_value;
     for (auto value_as_string : mxb::strtok(values_as_string, ","))
     {
         maxbase::trim(value_as_string);
+
+        if (value_as_string == "NONE")
+        {
+            value_NONE_seen = true;
+            continue;
+        }
 
         auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
                                [value_as_string](const std::pair<T, const char*>& elem) {
@@ -1187,34 +1194,42 @@ bool ParamEnumList<T>::from_string(const std::string& values_as_string,
         {
             pValue->push_back(it->first);
         }
-        else if (pMessage)
+        else
         {
-            std::string s;
-            for (size_t i = 0; i < m_enumeration.size(); ++i)
-            {
-                s += "'";
-                s += m_enumeration[i].second;
-                s += "'";
-
-                if (i == m_enumeration.size() - 2)
-                {
-                    s += " and ";
-                }
-                else if (i != m_enumeration.size() - 1)
-                {
-                    s += ", ";
-                }
-            }
-
-            *pMessage = "Invalid enumeration value: ";
-            *pMessage += value_as_string;
-            *pMessage += ", valid values are: ";
-            *pMessage += s;
-            *pMessage += ".";
-
+            invalid_value = value_as_string;
             success = false;
             break;
         }
+    }
+
+
+    if (!success || (value_NONE_seen && !pValue->empty()))
+    {
+        success = false;
+        pValue->clear();
+
+        std::string valid_values;
+        for (size_t i = 0; i < m_enumeration.size(); ++i)
+        {
+            valid_values += "'";
+            valid_values += m_enumeration[i].second;
+            valid_values += "'";
+
+            if (i == m_enumeration.size() - 2)
+            {
+                valid_values += " and ";
+            }
+            else if (i != m_enumeration.size() - 1)
+            {
+                valid_values += ", ";
+            }
+        }
+
+        *pMessage = "Invalid entry: '";
+        *pMessage += invalid_value.empty() ? values_as_string : invalid_value;
+        *pMessage += "'. Valid values are: ";
+        *pMessage += valid_values;
+        *pMessage += ". Use 'NONE' as the lone value to indicate no exclusions.";
     }
 
     return success;
@@ -1265,9 +1280,9 @@ bool ParamEnumList<T>::from_json(const json_t* pJson, value_type* pValue, std::s
                 {
                     values_as_string += ',';
                 }
-                
+
                 values_as_string += json_string_value(elem);
-                
+
                 first = false;
             }
             else
