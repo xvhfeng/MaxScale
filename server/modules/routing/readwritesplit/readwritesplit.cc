@@ -422,16 +422,7 @@ RWSplit* RWSplit::create(SERVICE* service)
 
 mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    try
-    {
-        return new RWSplitSession(this, session, RWBackend::from_endpoints(endpoints));
-    }
-    catch (const RWSException& e)
-    {
-        MXB_ERROR("%s", e.what());
-    }
-
-    return nullptr;
+    return new RWSplitSession(this, session, RWBackend::from_endpoints(endpoints));
 }
 
 json_t* RWSplit::diagnostics() const

@@ -36,13 +36,26 @@ mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoin
 
     for (const auto& a : backends)
     {
-        if (a->can_connect() && a->connect())
+        try
         {
-            connected = true;
+            if (a->can_connect())
+            {
+                a->connect();
+                connected = true;
+            }
+        }
+        catch (const mxb::Exception& e)
+        {
+            MXB_INFO("Failed to connect to '%s': %s", a->name(), e.what());
         }
     }
 
-    return connected ? new MirrorSession(pSession, this, std::move(backends)) : NULL;
+    if (!connected)
+    {
+        throw mxb::Exception("No connectable targets");
+    }
+
+    return new MirrorSession(pSession, this, std::move(backends));
 }
 
 json_t* Mirror::diagnostics() const

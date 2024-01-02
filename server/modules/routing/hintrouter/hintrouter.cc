@@ -145,13 +145,14 @@ bool HintRouter::connect_to_backend(MXS_SESSION* session,
 {
     bool result = false;
 
-    if (sref->connect())
+    try
     {
+        sref->connect();
         HR_DEBUG("Connected.");
         (*all_backends)[sref->target()->name()] = sref;
         result = true;
     }
-    else
+    catch (const mxb::Exception& e)
     {
         HR_DEBUG("Connection failed.");
     }

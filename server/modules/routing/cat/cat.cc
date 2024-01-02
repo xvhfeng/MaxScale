@@ -40,13 +40,26 @@ mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endp
 
     for (auto& a : backends)
     {
-        if (a.can_connect() && a.connect())
+        if (a.can_connect())
         {
-            connected = true;
+            try
+            {
+                a.connect();
+                connected = true;
+            }
+            catch (const mxb::Exception& e)
+            {
+                MXB_INFO("Failed to connect to '%s': %s", a.name(), e.what());
+            }
         }
     }
 
-    return connected ? new CatSession(pSession, this, std::move(backends)) : NULL;
+    if (!connected)
+    {
+        throw mxb::Exception("Failed to connect to any backends");
+    }
+
+    return new CatSession(pSession, this, std::move(backends));
 }
 
 json_t* Cat::diagnostics() const
