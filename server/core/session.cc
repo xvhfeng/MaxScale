@@ -685,12 +685,20 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
             MXS_SESSION::Scope scope(this);
             mxb_assert(state() == MXS_SESSION::State::STARTED);
 
-            if (!fn(std::move(*sbuf)))
+            try
             {
-                // Routing the query failed. Let parent component deal with it in handleError. This must
-                // currently be treated as a permanent error, otherwise it could result in an infinite
-                // retrying loop.
-                ref->parent()->handleError(mxs::ErrorType::PERMANENT, "Failed to route query",
+                if (!fn(std::move(*sbuf)))
+                {
+                    // Routing the query failed. Let parent component deal with it in handleError. This must
+                    // currently be treated as a permanent error, otherwise it could result in an infinite
+                    // retrying loop.
+                    ref->parent()->handleError(mxs::ErrorType::PERMANENT, "Failed to route query",
+                                               const_cast<mxs::Endpoint*>(ref.get()), mxs::Reply {});
+                }
+            }
+            catch (const mxb::Exception& e)
+            {
+                ref->parent()->handleError(mxs::ErrorType::PERMANENT, e.what(),
                                            const_cast<mxs::Endpoint*>(ref.get()), mxs::Reply {});
             }
 
@@ -1232,8 +1240,9 @@ bool Session::start()
 {
     bool rval = false;
 
-    if (m_down->connect())
+    try
     {
+        m_down->connect();
         rval = true;
         m_state = MXS_SESSION::State::STARTED;
 
@@ -1242,6 +1251,10 @@ bool Session::start()
                  !m_user.empty() ? m_user.c_str() : "<no user>",
                  m_client_conn->dcb()->remote().c_str(),
                  worker()->name());
+    }
+    catch (const mxb::Exception& e)
+    {
+        MXB_ERROR("%s", e.what());
     }
 
     return rval;
@@ -1396,12 +1409,16 @@ void Session::do_restart()
     }
     else
     {
-        auto down = static_cast<Service&>(*this->service).get_connection(this, this);
-
-        if (down->connect())
+        try
         {
+            auto down = static_cast<Service&>(*this->service).get_connection(this, this);
+            down->connect();
             m_down->close();
             m_down = std::move(down);
+        }
+        catch (const mxb::Exception& e)
+        {
+            MXB_ERROR("Failed to restart session: %s", e.what());
         }
     }
 

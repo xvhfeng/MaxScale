@@ -1780,8 +1780,9 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
 
                 if (client)
                 {
-                    if (client->connect())
+                    try
                     {
+                        client->connect();
                         auto ok_cb = [this, send_kill_resp, cl = client.get()](
                             GWBUF&& buf, const mxs::ReplyRoute& route, const mxs::Reply& reply){
                             MXB_INFO("Reply to KILL from '%s': %s",
@@ -1813,9 +1814,9 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                             add_local_client(client.release());
                         }
                     }
-                    else
+                    catch (const mxb::Exception& e)
                     {
-                        MXB_INFO("Failed to connect LocalClient to '%s'", a->name());
+                        MXB_INFO("Failed to connect LocalClient to '%s': %s", a->name(), e.what());
                     }
                 }
                 else

@@ -54,7 +54,14 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
     {
         if ((client = LocalClient::create(session, config.target)))
         {
-            client->connect();
+            try
+            {
+                client->connect();
+            }
+            catch (const mxb::Exception& e)
+            {
+                MXB_INFO("Failed to connect to '%s': %s", config.target->name(), e.what());
+            }
         }
         else
         {
