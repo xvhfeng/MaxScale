@@ -698,6 +698,9 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
             }
             catch (const mxb::Exception& e)
             {
+                // The call to routeQuery threw an exception, propagate the error to the parent component.
+                // Since the parent component is always a mxs::Component, this call to handleError will now
+                // throw.
                 ref->parent()->handleError(mxs::ErrorType::PERMANENT, e.what(),
                                            const_cast<mxs::Endpoint*>(ref.get()), mxs::Reply {});
             }
