@@ -1642,6 +1642,17 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     mxb_assert(m_open);
     mxb_assert(buffer);
 
+#ifdef SS_DEBUG
+    // Only throw the exception if there's another ServiceEndpoint above this one. Only the ServiceEndpoint
+    // catches the exception so throwing it in the root service would cause the process to be aborted. The
+    // MXS_SESSION doesn't catch exceptions as it's  expected that exceptions are isolated to the
+    // ServiceEndpoint.
+    if (this->parent()->parent())
+    {
+        MXB_MAYBE_EXCEPTION();
+    }
+#endif
+
     // Track the number of packets sent through this service. Although the traffic can consist of multiple
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
     m_service->stats().add_packet();
