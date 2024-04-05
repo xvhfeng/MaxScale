@@ -36,6 +36,7 @@
 #include <vector>
 
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/test_dir.hh>
@@ -1470,6 +1471,19 @@ bool MariaDBServer::copy_logs(const std::string& destination_prefix)
             }
         }
     }
+
+    m_vm.run_cmd_output_sudo("rm -rf /tmp/binlogs");
+    m_vm.run_cmd_output_sudo("mkdir /tmp/binlogs");
+    m_vm.run_cmd_output_sudo("cp /var/lib/mysql/mar-bin.0* -t /tmp/binlogs/");
+    m_vm.run_cmd_output_sudo("chmod -R a+r /tmp/binlogs/");
+    std::string binlogs = m_vm.run_cmd_output_sudo("ls -1 /tmp/binlogs/mar-bin.0*").output;
+
+    for (auto binlog : mxb::strtok(binlogs, "\n"))
+    {
+        std::string filename = mxb::strtok(binlog, "/").back();
+        m_vm.copy_from_node(binlog, destination_prefix + "-" + filename);
+    }
+
     return true;
 }
 
