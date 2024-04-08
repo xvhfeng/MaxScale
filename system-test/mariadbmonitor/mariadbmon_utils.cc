@@ -826,7 +826,7 @@ const MonitorInfo* get_primary_monitor(TestConnections& test, MonitorInfo* monit
         rval = find_primary();
     }
 
-    test.expect(primaries <= 1, "Found %i primary monitors when at most 1 was expected.", primaries);
+    test.expect(primaries == 1, "Found %i primary monitors when at most 1 was expected.", primaries);
     return rval;
 }
 

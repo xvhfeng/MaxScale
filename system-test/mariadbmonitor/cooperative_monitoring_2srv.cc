@@ -106,23 +106,25 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
-            test.log_printf("Block server2 and wait a few seconds. Server1 should be master.");
+            test.log_printf("Block server2 and wait a few seconds. Primary monitor should not change. "
+                            "Server1 should be promoted master.");
             int block_server_ind = 1;
             repl.block_node(block_server_ind);
+            sleep(2);
 
-            bool primary_mon_ok = false;
             for (int i = 0; i < 5; i++)
             {
-                sleep(2);
                 wait_both(1);
-                primary_mon = get_primary_monitor(test, monitors);
-                primary_mon_ok = (primary_mon && primary_mon->id == 1);
-                if (primary_mon_ok && mxs1.get_servers().get(0).status == mxt::ServerInfo::master_st)
+                auto mon_info = monitors[0];
+                test.expect(monitor_is_primary(test, mon_info),
+                            "MaxScale %i does not have exclusive lock after server2 was blocked.",
+                            mon_info.id);
+
+                if (mxs1.get_servers().get(0).status == mxt::ServerInfo::master_st)
                 {
                     break;
                 }
             }
-            test.expect(primary_mon_ok, "MaxScale1 does not have exclusive lock after server2 was blocked.");
 
             auto master_down = {mxt::ServerInfo::master_st, mxt::ServerInfo::DOWN};
             mxs1.check_print_servers_status(master_down);
@@ -179,14 +181,15 @@ void test_main(TestConnections& test)
                          "and rejoin server1.");
             srv2->stop_database();
             srv2->start_database();
-            mxs1.sleep_and_wait_for_monitor(1, 1);
-            mxs2.wait_for_monitor();
+            sleep(2);
+            wait_both(1);
             primary_mon = get_primary_monitor(test, monitors);
             test.expect(primary_mon, "No primary monitor.");
             if (primary_mon)
             {
                 test.tprintf("MaxScale %i is primary and should rejoin server1 shortly.", primary_mon->id);
-                primary_mon->maxscale->wait_for_monitor(4);
+                primary_mon->maxscale->wait_for_monitor(2);
+                wait_both(1);
                 mxs1.check_print_servers_status(slave_master);
                 mxs2.check_print_servers_status(slave_master);
             }
