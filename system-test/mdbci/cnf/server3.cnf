@@ -20,6 +20,7 @@ server_id=3
 user=mysql
 ## x001
 slave-skip-errors=all
+session_track_system_variables=*
 
 # this is only for embedded server
 [embedded]
