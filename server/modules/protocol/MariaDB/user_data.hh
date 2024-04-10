@@ -18,6 +18,7 @@
 
 #include <condition_variable>
 #include <map>
+#include <optional>
 #include <set>
 #include <thread>
 #include <maxsql/mariadb_connector.hh>
@@ -63,11 +64,11 @@ public:
      * Find a user entry with matching user & host.
      *
      * @param username Client username. This must match exactly with the entry.
-     * @param host Client address. This must match the entry host pattern.
+     * @param ip Client address. This must match the entry host pattern.
      * @return The found entry, or null if not found. The pointer should not be saved, as the
      * contents may go invalid after a refresh.
      */
-    const mariadb::UserEntry* find_entry(const std::string& username, const std::string& host) const;
+    const mariadb::UserEntry* find_entry(const std::string& username, const std::string& ip) const;
 
     /**
      * Find a user entry with matching user. Picks the first entry with a matching username without
@@ -135,7 +136,13 @@ private:
                               const std::string& target_role) const;
     bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
 
-    bool address_matches_host_pattern(const std::string& addr, const mariadb::UserEntry& entry) const;
+    struct HostnameRes
+    {
+        bool lookup_error {false};
+        std::string hostname;
+    };
+    bool address_matches_host_pattern(const std::string& addr, HostnameRes& hostname,
+                                      const mariadb::UserEntry& entry) const;
 
     enum class HostPatternMode
     {
@@ -145,7 +152,7 @@ private:
     };
 
     const mariadb::UserEntry*
-    find_entry(const std::string& username, const std::string& host, HostPatternMode mode) const;
+    find_entry(const std::string& username, const std::string& ip, HostPatternMode mode) const;
 
     enum class AddrType
     {
@@ -162,6 +169,7 @@ private:
         ADDRESS,
         MASK,
         HOSTNAME,
+        WC_ADDR_OR_HN,
     };
 
     AddrType    parse_address_type(const std::string& addr) const;
@@ -337,13 +345,13 @@ public:
      * out. Only if user gives the correct password the real error is returned.
      *
      * @param user Client username
-     * @param host Client hostname
+     * @param ip Client ip
      * @param requested_db Database requested by client. May be empty.
      * @param sett User search settings
      * @return Result of the search
      */
     mariadb::UserEntryResult
-    find_user(const std::string& user, const std::string& host, const std::string& requested_db,
+    find_user(const std::string& user, const std::string& ip, const std::string& requested_db,
               const mariadb::UserSearchSettings& sett) const;
 
     void update_from_master() override;
